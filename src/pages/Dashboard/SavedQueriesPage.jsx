@@ -1,72 +1,76 @@
 ﻿import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchSavedQueries, deleteQuery } from "../../features/savedQueries/savedQueriesSlice";
-import { setQueryGraph } from "../../features/queryBuilder/queryBuilderSlice";
-import { useNavigate } from "react-router-dom";
+import { fetchSavedQueries } from "../../features/savedQueries/savedQueriesSlice";
 
-export default function SavedQueriesPage() {
+const SavedQueriesPage = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { list, loading } = useSelector((state) => state.savedQueries);
+  const { list, loading, error } = useSelector((state) => state.savedQueries);
 
   useEffect(() => {
     dispatch(fetchSavedQueries());
   }, [dispatch]);
 
-  const handleDelete = (id) => {
-    dispatch(deleteQuery(id));
-  };
+  if (loading) return <div style={{ padding: "20px" }}>Loading...</div>;
 
-  const handleOpen = (query) => {
-    if (!query.query_graph) {
-      alert("This saved query does not contain graph data.");
-      return;
-    }
-
-    dispatch(setQueryGraph(query.query_graph));
-    navigate("/app/create");
-  };
-
-  
+  if (error)
+    return (
+      <div style={{ padding: "20px", color: "red" }}>
+        Error: {JSON.stringify(error)}
+      </div>
+    );
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <h1>Saved Queries</h1>
-      </div>
+    <div style={{ padding: "20px" }}>
+      <h2>Saved Queries</h2>
 
-      {loading && <p>Loading...</p>}
-
-      {!loading && list.length === 0 && (
-        <div className="empty-state">
-          <h2>No Saved Queries</h2>
-          <p>Create your first query using drag & drop builder.</p>
+      {list.length === 0 ? (
+        <div style={{ marginTop: "20px", color: "#777" }}>
+          No saved queries found.
         </div>
-      )}
-
-      {!loading && list.length > 0 && (
-        <div className="saved-list">
+      ) : (
+        <div style={{ marginTop: "20px" }}>
           {list.map((q) => (
-            <div key={q.id} className="saved-card">
-              <h3>{q.query_name || q.name}</h3>
-              <pre className="sql-preview">{q.sql_query}</pre>
+            <div
+              key={q.id}
+              style={{
+                border: "1px solid #ddd",
+                padding: "15px",
+                borderRadius: "10px",
+                marginBottom: "12px",
+                background: "#fff",
+              }}
+            >
+              <h3 style={{ margin: "0 0 6px 0" }}>
+                {q.query_name || "Untitled Query"}
+              </h3>
 
-              <div className="card-actions">
-                <button className="btn primary" onClick={() => handleOpen(q)}>
-                  Open
-                </button>
+              <p style={{ margin: "0 0 6px 0", fontSize: "13px", color: "#666" }}>
+                Status: <b>{q.query_status || "UNKNOWN"}</b>
+              </p>
 
-                <button
-                  className="btn danger"
-                  onClick={() => handleDelete(q.id)}
-                >
-                  Delete
-                </button>
-              </div>
+              <p style={{ margin: "0 0 10px 0", fontSize: "12px", color: "#999" }}>
+                Created:{" "}
+                {q.created_at ? new Date(q.created_at).toLocaleString() : "N/A"}
+              </p>
+
+              <pre
+                style={{
+                  background: "#f7f7f7",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  maxHeight: "100px",
+                  overflow: "hidden",
+                }}
+              >
+                {q.sql_text || "No SQL saved"}
+              </pre>
             </div>
           ))}
         </div>
       )}
     </div>
   );
-}
+};
+
+export default SavedQueriesPage;

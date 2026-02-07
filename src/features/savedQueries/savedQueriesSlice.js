@@ -1,27 +1,23 @@
 ﻿import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { fetchSavedQueriesAPI, saveQueryAPI, deleteQueryAPI } from "../../api/savedQueries";
+import axiosInstance from "../../api/axiosInstance";
 
 export const fetchSavedQueries = createAsyncThunk(
   "savedQueries/fetchSavedQueries",
-  async () => {
-    const res = await fetchSavedQueriesAPI();
-    return res.data;
-  }
-);
+  async (_, thunkAPI) => {
+    try {
+      const res = await axiosInstance.get("/api/saved-query");
 
-export const saveQuery = createAsyncThunk(
-  "savedQueries/saveQuery",
-  async (payload) => {
-    const res = await saveQueryAPI(payload);
-    return res.data;
-  }
-);
+      console.log("Saved Query Response:", res.data);
 
-export const deleteQuery = createAsyncThunk(
-  "savedQueries/deleteQuery",
-  async (queryId) => {
-    await deleteQueryAPI(queryId);
-    return queryId;
+      // Normalize response
+      if (Array.isArray(res.data)) return res.data;
+      if (res.data.saved_queries) return res.data.saved_queries;
+      if (res.data.data) return res.data.data;
+
+      return [];
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
   }
 );
 
@@ -30,13 +26,14 @@ const savedQueriesSlice = createSlice({
   initialState: {
     list: [],
     loading: false,
-    error: null
+    error: null,
   },
   reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchSavedQueries.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchSavedQueries.fulfilled, (state, action) => {
         state.loading = false;
@@ -44,15 +41,9 @@ const savedQueriesSlice = createSlice({
       })
       .addCase(fetchSavedQueries.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
-      })
-      .addCase(saveQuery.fulfilled, (state, action) => {
-        state.list.unshift(action.payload);
-      })
-      .addCase(deleteQuery.fulfilled, (state, action) => {
-        state.list = state.list.filter((q) => q.id !== action.payload);
+        state.error = action.payload;
       });
-  }
+  },
 });
 
 export default savedQueriesSlice.reducer;
