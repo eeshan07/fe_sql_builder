@@ -1,0 +1,235 @@
+﻿body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f6f7fb;
+}
+
+.btn {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn.primary {
+  background: #2c5cff;
+  color: white;
+}
+
+.btn.success {
+  background: #14b86a;
+  color: white;
+}
+
+.btn.danger {
+  background: #ff3d3d;
+  color: white;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid #ccc;
+}
+
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: #111827;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-links {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-link {
+  text-decoration: none;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.sidebar-link.active {
+  background: #2c5cff;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.empty-state {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.saved-card {
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.sql-preview {
+  background: #f0f0f0;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  width: 400px;
+  box-shadow: 0px 4px 14px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.query-builder {
+  display: flex;
+  height: 80vh;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.left-panel {
+  width: 260px;
+  background: #f3f4f6;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.table-item {
+  background: white;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  cursor: grab;
+  border: 1px solid #ddd;
+}
+
+.canvas-panel {
+  flex: 1;
+  position: relative;
+}
+
+.canvas-toolbar {
+  padding: 10px;
+  background: #f9fafb;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  gap: 10px;
+}
+
+.sql-output {
+  padding: 10px;
+  background: #f9fafb;
+  border-top: 1px solid #ddd;
+  height: 250px;
+  overflow-y: auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  width: 450px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.form-row {
+  margin-bottom: 12px;
+}
+
+.form-row label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.form-row input, .form-row select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.canvas-info {
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
