@@ -2,15 +2,35 @@
 import axiosInstance from "../../api/axiosInstance";
 
 export const fetchTables = createAsyncThunk("metadata/fetchTables", async () => {
-  const res = await axiosInstance.get("api/metadata/tables");
-  return res.data; 
+  const res = await axiosInstance.get("/api/metadata/tables");
+
+  console.log("DEBUG tables API response:", res.data);
+
+  // normalize response
+  if (Array.isArray(res.data)) return res.data;
+  if (res.data.tables) return res.data.tables;
+  return [];
 });
+
+export const fetchTableColumns = createAsyncThunk(
+  "metadata/fetchTableColumns",
+  async (tableId) => {
+    const res = await axiosInstance.get(`/api/metadata/tables/${tableId}/columns`);
+
+    console.log("DEBUG columns API response:", res.data);
+
+    // normalize response
+    if (Array.isArray(res.data)) return { tableId, columns: res.data };
+    if (res.data.columns) return { tableId, columns: res.data.columns };
+    return { tableId, columns: [] };
+  }
+);
 
 const metadataSlice = createSlice({
   name: "metadata",
   initialState: {
     tables: [],
-    tablesByName: {},
+    tableColumnsById: {},
     loading: false,
     error: null,
   },
@@ -19,27 +39,18 @@ const metadataSlice = createSlice({
     builder
       .addCase(fetchTables.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(fetchTables.fulfilled, (state, action) => {
         state.loading = false;
-
-        // backend response should be array
-        const tables = action.payload || [];
-
-        state.tables = tables;
-
-        // build lookup map
-        const map = {};
-        tables.forEach((t) => {
-          map[t.name] = t;
-        });
-
-        state.tablesByName = map;
+        state.tables = action.payload;
       })
       .addCase(fetchTables.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
+      })
+
+      .addCase(fetchTableColumns.fulfilled, (state, action) => {
+        state.tableColumnsById[action.payload.tableId] = action.payload.columns;
       });
   },
 });

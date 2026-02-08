@@ -1,215 +1,152 @@
-﻿import React, { useCallback, useMemo, useState } from "react";
+﻿import React, { useCallback, useRef, useState } from "react";
 import ReactFlow, {
   addEdge,
-  applyNodeChanges,
-  applyEdgeChanges,
   Background,
   Controls,
   MiniMap,
+  useEdgesState,
+  useNodesState,
 } from "reactflow";
 import "reactflow/dist/style.css";
-
-import { useSelector } from "react-redux";
 import JoinModal from "./JoinModal";
+import { parseColumns } from "../../utils/parseColumns";
+
+let id = 0;
+const getId = () => `node_${id++}`;
 
 const QueryBuilderCanvas = () => {
-  const { tablesByName } = useSelector((state) => state.metadata);
+  const reactFlowWrapper = useRef(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const [joinModalOpen, setJoinModalOpen] = useState(false);
-  const [pendingConnection, setPendingConnection] = useState(null);
+  const [joinInfo, setJoinInfo] = useState(null);
 
-  const [joins, setJoins] = useState([]); // store join metadata
-
-  const nodeTypes = useMemo(() => ({}), []);
-
-  // Node movement support
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
-
-  // When user creates connection between two tables
-  const onConnect = useCallback((params) => {
-    setPendingConnection(params);
-    setJoinModalOpen(true);
-  }, []);
-
-  const handleJoinSave = (joinData) => {
-    if (!pendingConnection) return;
-
-    const newEdge = {
-      ...pendingConnection,
-      id: `e-${pendingConnection.source}-${pendingConnection.target}-${Date.now()}`,
-      label: `${joinData.joinType}: ${joinData.leftColumn} = ${joinData.rightColumn}`,
-      animated: true,
-      style: { strokeWidth: 2 },
-    };
-
-    setEdges((eds) => [...eds, newEdge]);
-
-    setJoins((prev) => [
-      ...prev,
-      {
-        source: pendingConnection.source,
-        target: pendingConnection.target,
-        ...joinData,
-      },
-    ]);
-
-    setJoinModalOpen(false);
-    setPendingConnection(null);
-  };
-
-  // Allow drop
+  // -------------------------------
+  // DRAG OVER (required)
+  // -------------------------------
   const onDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   }, []);
 
-  // Drop table on canvas
+  // -------------------------------
+  // DROP TABLE INTO CANVAS
+  // -------------------------------
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
 
-      const tableName = event.dataTransfer.getData("tableName");
+      if (!reactFlowInstance) return;
 
-      if (!tableName) return;
+      const tableRaw = event.dataTransfer.getData("application/reactflow");
+      if (!tableRaw) return;
 
-      const table = tablesByName?.[tableName];
-      if (!table) return;
+      const table = JSON.parse(tableRaw);
 
-      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
 
-      const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      };
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
 
-      const nodeId = `${tableName}-${Date.now()}`;
+      const tableCols = parseColumns(table.columns);
 
       const newNode = {
-        id: nodeId,
+        id: getId(),
         position,
         data: {
-          label: tableName,
-          tableName: tableName,
+          tableId: table.id,
+          tableName: table.name,
+          columns: tableCols,
         },
-        style: {
-          padding: 10,
-          borderRadius: 8,
-          border: "1px solid #888",
-          background: "#fff",
-          minWidth: 180,
-        },
+        type: "default",
       };
 
-      setNodes((prev) => [...prev, newNode]);
+      setNodes((nds) => [...nds, newNode]);
     },
-    [tablesByName]
+    [reactFlowInstance, setNodes]
   );
 
-  const resetCanvas = () => {
-    setNodes([]);
-    setEdges([]);
-    setJoins([]);
+  // -------------------------------
+  // CONNECT (JOIN)
+  // -------------------------------
+  const onConnect = useCallback(
+    (params) => {
+      const sourceNode = nodes.find((n) => n.id === params.source);
+      const targetNode = nodes.find((n) => n.id === params.target);
+
+      if (!sourceNode || !targetNode) return;
+
+      setJoinInfo({
+        sourceNode,
+        targetNode,
+        params,
+      });
+
+      setJoinModalOpen(true);
+    },
+    [nodes]
+  );
+
+  // -------------------------------
+  // SAVE JOIN
+  // -------------------------------
+  const handleSaveJoin = (joinCondition) => {
+    if (!joinInfo) return;
+
+    const { params, sourceNode, targetNode } = joinInfo;
+
+    setEdges((eds) =>
+      addEdge(
+        {
+          ...params,
+          label: `${sourceNode.data.tableName}.${joinCondition.left} = ${targetNode.data.tableName}.${joinCondition.right}`,
+          data: joinCondition,
+        },
+        eds
+      )
+    );
+
+    setJoinModalOpen(false);
+    setJoinInfo(null);
   };
 
-  const generateSQL = () => {
-    if (nodes.length === 0) {
-      alert("No tables added.");
-      return;
-    }
-
-    const tableNames = nodes.map((n) => n.data.tableName);
-
-    let sql = `SELECT *\nFROM ${tableNames[0]}`;
-
-    joins.forEach((j) => {
-      const sourceTable = nodes.find((n) => n.id === j.source)?.data?.tableName;
-      const targetTable = nodes.find((n) => n.id === j.target)?.data?.tableName;
-
-      if (!sourceTable || !targetTable) return;
-
-      sql += `\n${j.joinType} JOIN ${targetTable} ON ${sourceTable}.${j.leftColumn} = ${targetTable}.${j.rightColumn}`;
-    });
-
-    sql += ";";
-
-    alert(sql);
+  const handleCloseJoin = () => {
+    setJoinModalOpen(false);
+    setJoinInfo(null);
   };
 
   return (
-    <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
-      {/* TOP BAR (RESTORED) */}
-      <div
-        style={{
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "10px 15px",
-          borderBottom: "1px solid #ddd",
-          background: "#f8f8f8",
-        }}
+    <div style={{ width: "100%", height: "100%" }} ref={reactFlowWrapper}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onInit={setReactFlowInstance}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        fitView
       >
-        <div>
-          <h3 style={{ margin: 0 }}>Query Builder</h3>
-          <small style={{ color: "#666" }}>
-            Tables: {nodes.length} | Joins: {edges.length}
-          </small>
-        </div>
+        <MiniMap />
+        <Controls />
+        <Background />
+      </ReactFlow>
 
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={resetCanvas} style={{ padding: "8px 14px" }}>
-            Reset
-          </button>
-          <button onClick={generateSQL} style={{ padding: "8px 14px" }}>
-            Generate SQL
-          </button>
-        </div>
-      </div>
-
-      {/* REACTFLOW AREA */}
-      <div style={{ flex: 1, width: "100%" }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          fitView
-          nodesDraggable={true}
-          panOnDrag={true}
-          zoomOnScroll={true}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-        >
-          <MiniMap />
-          <Controls />
-          <Background />
-        </ReactFlow>
-      </div>
-
-      {/* JOIN MODAL */}
-      <JoinModal
-        isOpen={joinModalOpen}
-        onClose={() => {
-          setJoinModalOpen(false);
-          setPendingConnection(null);
-        }}
-        sourceNode={nodes.find((n) => n.id === pendingConnection?.source)}
-        targetNode={nodes.find((n) => n.id === pendingConnection?.target)}
-        onSave={handleJoinSave}
-      />
+      {joinModalOpen && joinInfo && (
+        <JoinModal
+          open={joinModalOpen}
+          sourceNode={joinInfo.sourceNode}
+          targetNode={joinInfo.targetNode}
+          onClose={handleCloseJoin}
+          onSave={handleSaveJoin}
+        />
+      )}
     </div>
   );
 };

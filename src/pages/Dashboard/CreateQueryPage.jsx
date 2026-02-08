@@ -1,36 +1,34 @@
-﻿import React, { useEffect } from "react";
-import { useDispatch } from "react-redux";
-
+﻿import React, { useRef } from "react";
 import QueryBuilderCanvas from "../../components/queryBuilder/QueryBuilderCanvas";
 import TablePanel from "../../components/queryBuilder/TablePanel";
 
-import { fetchTables } from "../../features/metadata/metadataSlice";
-
 const CreateQueryPage = () => {
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    dispatch(fetchTables());
-  }, [dispatch]);
+  const canvasRef = useRef(null);
 
   return (
     <div style={{ display: "flex", height: "100vh", width: "100%" }}>
-      {/* LEFT SIDE TABLE LIST */}
+      {/* LEFT SIDE */}
       <div
         style={{
-          width: "280px",
+          width: "320px",
           borderRight: "1px solid #ddd",
           background: "#fff",
           overflowY: "auto",
           padding: "10px",
         }}
       >
-        <TablePanel />
+        <TablePanel
+          onAddTable={(table) => {
+            if (canvasRef.current) {
+              canvasRef.current.addTable(table);
+            }
+          }}
+        />
       </div>
 
       {/* CANVAS */}
       <div style={{ flex: 1, height: "100%" }}>
-        <QueryBuilderCanvas />
+        <QueryBuilderCanvas ref={canvasRef} />
       </div>
     </div>
   );
